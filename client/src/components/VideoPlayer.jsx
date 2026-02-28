@@ -53,19 +53,18 @@ function drainQueue() {
   synth.speak(utt)
 }
 
-// ── Speech-timing utilities ───────────────────────────────────────────────
-// Estimate how long a piece of text takes to speak at rate 0.88
-// (~150 wpm × 0.88 ≈ 132 wpm).  Used to schedule bullet reveals so they
-// appear *after* the preceding cue has finished, not at a fixed interval.
+// ── Speech-timing utilities ───────────────────────────────────────────────────
+// Estimate speaking time for a piece of text at rate 0.88 (~132 wpm).
 const WORDS_PER_MIN = 132
-const CUE_GAP_SECS  = 0.5   // brief breath between consecutive cues
+const CUE_GAP_SECS  = 0.5   // breath pause between consecutive cues
+const SCENE_BUFFER  = 6     // extra seconds after last cue before scene advances
 
 function estimateSpeechSecs(text) {
   return (text.trim().split(/\s+/).length / WORDS_PER_MIN) * 60
 }
 
-// Returns an array of start times (seconds) for each cue in the array.
-// cue[0] always fires at t=0; cue[i] fires after cue[i-1] is estimated done.
+// Start time (seconds) of each cue within a scene.
+// cue[0] = 0 (immediate); cue[i] fires after cue[i-1] is estimated done.
 function getCueTimes(cues) {
   const times = [0]
   let t = 0
@@ -74,6 +73,15 @@ function getCueTimes(cues) {
     times.push(t)
   }
   return times
+}
+
+// Minimum scene duration so ALL speech finishes before the scene advances.
+// = start of last cue  +  estimated duration of last cue  +  buffer.
+function computeSceneDuration(cues) {
+  if (!cues.length) return 90          // fallback for scenes with no narration
+  const times   = getCueTimes(cues)
+  const lastIdx = cues.length - 1
+  return times[lastIdx] + estimateSpeechSecs(cues[lastIdx]) + SCENE_BUFFER
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -86,10 +94,17 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
   const intervalRef   = useRef(null)
   const elapsedRef    = useRef(0)
   const mutedRef      = useRef(false)
-  const firedCuesRef  = useRef(new Set())   // indices of cues already spoken this scene
+  const firedCuesRef  = useRef(new Set())
   const prevSceneRef  = useRef(-1)
 
-  const totalDuration = scenes.reduce((s, sc) => s + sc.duration, 0)
+  // ── Compute speech-driven scene durations ─────────────────────────────────
+  // Each scene lasts at least as long as all its narration cues need to speak.
+  // This replaces the static scene.duration values from modules.js so that a
+  // scene NEVER advances while its audio is still playing.
+  const sceneDurations = scenes.map((_, i) =>
+    computeSceneDuration(NARRATIONS[moduleId]?.[i] ?? [])
+  )
+  const totalDuration = sceneDurations.reduce((s, d) => s + d, 0)
 
   useEffect(() => { elapsedRef.current = elapsed }, [elapsed])
   useEffect(() => { mutedRef.current = muted }, [muted])
@@ -130,24 +145,23 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
     return () => clearInterval(intervalRef.current)
   }, [playing, tick])
 
-  // ── Derive active scene ───────────────────────────────────────────────────
+  // ── Derive active scene (using speech-driven durations) ───────────────────
   let sceneIdx = 0
-  let cumTime = 0
+  let cumTime  = 0
   for (let i = 0; i < scenes.length; i++) {
-    cumTime += scenes[i].duration
+    cumTime += sceneDurations[i]
     if (elapsed < cumTime || i === scenes.length - 1) { sceneIdx = i; break }
   }
-  const scene = scenes[sceneIdx]
-  const prevCum = scenes.slice(0, sceneIdx).reduce((s, sc) => s + sc.duration, 0)
+  const scene    = scenes[sceneIdx]
+  const prevCum  = sceneDurations.slice(0, sceneIdx).reduce((s, d) => s + d, 0)
   const sceneElapsed = elapsed - prevCum
 
-  // ── Cue times (speech-estimated) ─────────────────────────────────────────
-  // cue[0] = intro narration fires at t=0 (no bullet yet)
-  // cue[i] fires after cue[i-1] estimated speech finishes → bullet[i-1] appears
-  const sceneCues   = NARRATIONS[moduleId]?.[sceneIdx] ?? []
-  const cueTimes    = getCueTimes(sceneCues)
+  // ── Cue times & bullet visibility ────────────────────────────────────────
+  // cue[0] fires at t=0 (intro, no bullet yet).
+  // cue[i>0] fires after cue[i-1] finishes → bullet[i-1] appears at that moment.
+  const sceneCues  = NARRATIONS[moduleId]?.[sceneIdx] ?? []
+  const cueTimes   = getCueTimes(sceneCues)
 
-  // Bullet[i] becomes visible when cue[i+1] fires (i.e. after intro + i prior cues)
   const visibleBullets = Math.min(
     cueTimes.slice(1).filter(t => sceneElapsed >= t).length,
     scene.bullets.length
@@ -160,7 +174,7 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
     firedCuesRef.current = new Set()
   }
 
-  // Fire each cue when sceneElapsed reaches its estimated start time
+  // Fire each cue at its estimated start time within the scene
   useEffect(() => {
     if (!playing || mutedRef.current) return
 
@@ -183,14 +197,14 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
 
   // ── Controls ──────────────────────────────────────────────────────────────
   function formatTime(s) {
-    const m = Math.floor(s / 60)
+    const m  = Math.floor(s / 60)
     const ss = Math.floor(s % 60)
     return `${m}:${ss.toString().padStart(2, '0')}`
   }
 
   function handlePlayPause() {
     if (!playing) {
-      // On resume, allow already-passed cues for the current scene to re-fire
+      // On resume, allow already-passed cues to re-fire from current position
       firedCuesRef.current = new Set()
     }
     setPlaying(p => !p)
@@ -224,7 +238,7 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
   }
 
   function jumpToScene(idx) {
-    const t = scenes.slice(0, idx).reduce((s, sc) => s + sc.duration, 0)
+    const t = sceneDurations.slice(0, idx).reduce((s, d) => s + d, 0)
     seekTo(t / totalDuration)
   }
 
