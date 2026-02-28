@@ -1,29 +1,50 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import SceneRenderer from './SceneRenderer.jsx'
+import { NARRATIONS } from '../data/narrations.js'
 
 const TICK_MS = 100
 
-// ── Web Speech API helper ─────────────────────────────────────────────────────
-const synth = window.speechSynthesis
+// ── Speech engine ─────────────────────────────────────────────────────────────
+// Wraps Web Speech API with:
+//  • preferred voice selection (runs once after voices load)
+//  • never cancels a sentence mid-way within a scene (only on explicit stop/seek)
+//  • Chrome "15-second pause" bug workaround via periodic resume()
 
-function speak(text, { rate = 0.92, pitch = 1.0, volume = 1.0 } = {}) {
+const synth = window.speechSynthesis
+let preferredVoice = null
+
+function loadVoice() {
+  const voices = synth.getVoices()
+  if (!voices.length) return
+  // Priority order: Google Natural, Google US, Apple Samantha/Daniel, any en-US, any en
+  preferredVoice =
+    voices.find(v => v.name === 'Google US English') ||
+    voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) ||
+    voices.find(v => v.name === 'Samantha' || v.name === 'Daniel') ||
+    voices.find(v => v.lang === 'en-US') ||
+    voices.find(v => v.lang.startsWith('en')) ||
+    null
+}
+
+// Voices load asynchronously in Chrome
+loadVoice()
+if (synth.onvoiceschanged !== undefined) {
+  synth.onvoiceschanged = loadVoice
+}
+
+function speakText(text, { rate = 0.88, pitch = 1.0, onEnd } = {}) {
   synth.cancel()
   const utt = new SpeechSynthesisUtterance(text)
   utt.rate = rate
   utt.pitch = pitch
-  utt.volume = volume
-  // Prefer a natural-sounding English voice if available
-  const voices = synth.getVoices()
-  const preferred = voices.find(v =>
-    v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Daniel') || v.name.includes('Samantha'))
-  ) || voices.find(v => v.lang.startsWith('en'))
-  if (preferred) utt.voice = preferred
+  utt.volume = 1.0
+  if (preferredVoice) utt.voice = preferredVoice
+  if (onEnd) utt.onend = onEnd
   synth.speak(utt)
-  return utt
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function VideoPlayer({ scenes, onComplete }) {
+export default function VideoPlayer({ moduleId, scenes, onComplete }) {
   const [elapsed, setElapsed] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [completed, setCompleted] = useState(false)
@@ -31,16 +52,26 @@ export default function VideoPlayer({ scenes, onComplete }) {
 
   const intervalRef = useRef(null)
   const elapsedRef = useRef(0)
-  const prevSceneIdxRef = useRef(-1)
-  const prevBulletCountRef = useRef(0)
   const mutedRef = useRef(false)
+  const prevSceneIdxRef = useRef(-1)
+  // Track the utterance that is currently scheduled so we can cancel only on
+  // explicit user action (pause / seek), not on every bullet reveal
+  const speakTimerRef = useRef(null)
 
   const totalDuration = scenes.reduce((s, sc) => s + sc.duration, 0)
 
-  // Keep refs in sync so interval callbacks see latest values
   useEffect(() => { elapsedRef.current = elapsed }, [elapsed])
   useEffect(() => { mutedRef.current = muted }, [muted])
 
+  // ── Chrome bug workaround: speech synthesis silently pauses after ~15 s ──
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (synth.speaking && synth.paused) synth.resume()
+    }, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  // ── Timer ─────────────────────────────────────────────────────────────────
   const tick = useCallback(() => {
     const next = elapsedRef.current + TICK_MS / 1000
     if (next >= totalDuration) {
@@ -60,6 +91,8 @@ export default function VideoPlayer({ scenes, onComplete }) {
       intervalRef.current = setInterval(tick, TICK_MS)
     } else {
       clearInterval(intervalRef.current)
+      // Pause speech when player pauses — don't cancel entirely so resuming
+      // could continue, but synth.pause() is unreliable in Chrome, so cancel.
       synth.cancel()
     }
     return () => clearInterval(intervalRef.current)
@@ -79,43 +112,51 @@ export default function VideoPlayer({ scenes, onComplete }) {
 
   const prevCum = scenes.slice(0, sceneIdx).reduce((s, sc) => s + sc.duration, 0)
   const sceneElapsed = elapsed - prevCum
-  const bulletInterval = scene.bullets.length > 0 ? scene.duration / (scene.bullets.length + 1) : scene.duration
+  const bulletInterval = scene.bullets.length > 0
+    ? scene.duration / (scene.bullets.length + 1)
+    : scene.duration
   const visibleBullets = Math.min(
     Math.floor(sceneElapsed / bulletInterval),
     scene.bullets.length
   )
 
-  // ── TTS: speak narration when scene changes ───────────────────────────────
+  // ── TTS: speak expanded narration when scene changes ─────────────────────
+  // We deliberately do NOT read bullet text — the user can read the slides.
+  // Instead we speak the richer contextual narration from narrations.js.
   useEffect(() => {
     if (!playing) return
     if (sceneIdx === prevSceneIdxRef.current) return
+
     prevSceneIdxRef.current = sceneIdx
-    prevBulletCountRef.current = 0
+
+    // Clear any pending speak timer from a previous scene transition
+    clearTimeout(speakTimerRef.current)
 
     if (!mutedRef.current) {
-      speak(`${scene.title}. ${scene.narration}`)
+      // Small delay so the scene transition animation completes first
+      speakTimerRef.current = setTimeout(() => {
+        if (mutedRef.current) return
+        const text = NARRATIONS[moduleId]?.[sceneIdx] || scene.narration
+        speakText(text, { rate: 0.88 })
+      }, 600)
     }
-  }, [sceneIdx, playing, scene])
 
-  // ── TTS: speak each bullet as it appears ─────────────────────────────────
-  useEffect(() => {
-    if (!playing) return
-    if (visibleBullets <= prevBulletCountRef.current) return
-    const newBulletIdx = visibleBullets - 1
-    prevBulletCountRef.current = visibleBullets
-
-    if (!mutedRef.current && scene.bullets[newBulletIdx]) {
-      // Short delay so bullet animation is visible first
-      setTimeout(() => {
-        if (!mutedRef.current) speak(scene.bullets[newBulletIdx], { rate: 0.88 })
-      }, 300)
-    }
-  }, [visibleBullets, playing, scene])
+    return () => clearTimeout(speakTimerRef.current)
+  }, [sceneIdx, playing, moduleId, scene.narration])
 
   // ── Cancel speech when muted ──────────────────────────────────────────────
   useEffect(() => {
-    if (muted) synth.cancel()
+    if (muted) {
+      clearTimeout(speakTimerRef.current)
+      synth.cancel()
+    }
   }, [muted])
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    synth.cancel()
+    clearTimeout(speakTimerRef.current)
+  }, [])
 
   // ── Controls ──────────────────────────────────────────────────────────────
   function formatTime(s) {
@@ -126,25 +167,25 @@ export default function VideoPlayer({ scenes, onComplete }) {
 
   function handlePlayPause() {
     if (!playing) {
-      // Resuming — if we're at the start of a scene, re-speak narration
+      // Force re-speak narration for current scene when resuming
       prevSceneIdxRef.current = -1
     }
     setPlaying(p => !p)
   }
 
   function handleReset() {
+    clearTimeout(speakTimerRef.current)
     synth.cancel()
+    prevSceneIdxRef.current = -1
     setElapsed(0)
     setCompleted(false)
     setPlaying(false)
-    prevSceneIdxRef.current = -1
-    prevBulletCountRef.current = 0
   }
 
   function seekTo(pct) {
+    clearTimeout(speakTimerRef.current)
     synth.cancel()
     prevSceneIdxRef.current = -1
-    prevBulletCountRef.current = 0
     const newTime = pct * totalDuration
     setElapsed(newTime)
     if (newTime >= totalDuration) {
@@ -156,8 +197,7 @@ export default function VideoPlayer({ scenes, onComplete }) {
 
   function handleProgressClick(e) {
     const rect = e.currentTarget.getBoundingClientRect()
-    const pct = (e.clientX - rect.left) / rect.width
-    seekTo(Math.max(0, Math.min(1, pct)))
+    seekTo(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)))
   }
 
   function jumpToScene(idx) {
@@ -191,7 +231,7 @@ export default function VideoPlayer({ scenes, onComplete }) {
           </div>
         </div>
 
-        {/* Narration */}
+        {/* Narration subtitle strip */}
         <div className="scene-narration">
           <em>{scene.narration}</em>
         </div>
@@ -202,11 +242,10 @@ export default function VideoPlayer({ scenes, onComplete }) {
         <button className="ctrl-btn" onClick={handlePlayPause}>
           {playing ? '⏸ Pause' : '▶ Play'}
         </button>
-        <button className="ctrl-btn" onClick={handleReset} title="Restart">
+        <button className="ctrl-btn" onClick={handleReset} title="Restart from beginning">
           ↺
         </button>
 
-        {/* Progress bar */}
         <div className="progress-bar-wrap">
           <div className="progress-bar-bg" onClick={handleProgressClick}>
             <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
@@ -215,7 +254,6 @@ export default function VideoPlayer({ scenes, onComplete }) {
 
         <span className="time-display">{formatTime(elapsed)} / {formatTime(totalDuration)}</span>
 
-        {/* Mute toggle */}
         <button
           className="ctrl-btn"
           onClick={() => setMuted(m => !m)}
@@ -225,7 +263,6 @@ export default function VideoPlayer({ scenes, onComplete }) {
           {muted ? '🔇' : '🔊'}
         </button>
 
-        {/* Scene chips */}
         <div className="scene-chips">
           {scenes.map((sc, i) => (
             <button
@@ -240,7 +277,6 @@ export default function VideoPlayer({ scenes, onComplete }) {
         </div>
       </div>
 
-      {/* Completion banner */}
       {completed && (
         <div className="video-complete-banner">
           <span className="check-icon">✅</span>
