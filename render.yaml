@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: capital-markets-portal
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install && cd server && npm install && cd .. && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
