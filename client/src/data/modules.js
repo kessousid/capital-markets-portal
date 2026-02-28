@@ -14,7 +14,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'What Are Capital Markets?',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #0d1b2a 0%, #1a2f4a 100%)',
         svgType: 'capital-stack',
         svgData: {
@@ -37,7 +37,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Market Participants & Roles',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1628 0%, #1e3560 100%)',
         svgType: 'flow-diagram',
         svgData: {
@@ -66,7 +66,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Primary vs Secondary Markets',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1f3d 0%, #0d2b52 100%)',
         svgType: 'two-column',
         svgData: {
@@ -89,7 +89,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Economic Role of Capital Markets',
-        duration: 46,
+        duration: 100,
         background: 'linear-gradient(135deg, #0d1a35 0%, #152a55 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -124,7 +124,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Stock Market Fundamentals',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1e0a 0%, #0d2b0d 100%)',
         svgType: 'line-chart',
         svgData: {
@@ -155,7 +155,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Order Types & Trading Mechanics',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1a0a 0%, #112a11 100%)',
         svgType: 'order-book',
         svgData: {
@@ -186,7 +186,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Stock Valuation Methods',
-        duration: 54,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1a12 0%, #0e2b1a 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -212,7 +212,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Market Indices & Benchmarks',
-        duration: 44,
+        duration: 100,
         background: 'linear-gradient(135deg, #0c1e0c 0%, #142a14 100%)',
         svgType: 'line-chart',
         svgData: {
@@ -247,7 +247,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Bond Basics & Terminology',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1400 0%, #2a2000 100%)',
         svgType: 'cash-flow-timeline',
         svgData: {
@@ -269,7 +269,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'The Yield Curve',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1200 0%, #2b1e00 100%)',
         svgType: 'yield-curve',
         svgData: {
@@ -313,7 +313,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Credit Ratings & Bond Types',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1500 0%, #292000 100%)',
         svgType: 'rating-ladder',
         svgData: {
@@ -340,7 +340,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Bond Pricing & Interest Rate Risk',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1300 0%, #271e00 100%)',
         svgType: 'line-chart',
         svgData: {
@@ -378,7 +378,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Money Market Overview',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0a2e 0%, #2a1050 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -404,7 +404,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Treasury Bills & Government Securities',
-        duration: 46,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a082a 0%, #250d3f 100%)',
         svgType: 'cash-flow-timeline',
         svgData: {
@@ -428,7 +428,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Repurchase Agreements (Repos)',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #180a2e 0%, #221040 100%)',
         svgType: 'flow-diagram',
         svgData: {
@@ -455,7 +455,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Commercial Paper & LIBOR Transition',
-        duration: 46,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0a2a 0%, #220f36 100%)',
         svgType: 'two-column',
         svgData: {
@@ -490,7 +490,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Derivatives Overview',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0e00 0%, #2a1800 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -516,7 +516,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Options: Calls & Puts',
-        duration: 54,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0d00 0%, #281600 100%)',
         svgType: 'payoff-diagram',
         svgData: {
@@ -540,7 +540,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Futures & Forwards',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1000 0%, #261800 100%)',
         svgType: 'two-column',
         svgData: {
@@ -564,7 +564,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Interest Rate Swaps',
-        duration: 54,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a1100 0%, #231700 100%)',
         svgType: 'swap-flow',
         svgData: {
@@ -599,7 +599,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Modern Portfolio Theory Basics',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #001a1a 0%, #002a2a 100%)',
         svgType: 'efficient-frontier',
         svgData: {
@@ -628,7 +628,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Asset Allocation Strategies',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #001818 0%, #002424 100%)',
         svgType: 'pie-chart',
         svgData: {
@@ -666,7 +666,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'CAPM & Security Market Line',
-        duration: 54,
+        duration: 100,
         background: 'linear-gradient(135deg, #001a18 0%, #00282a 100%)',
         svgType: 'security-market-line',
         svgData: {
@@ -693,7 +693,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Factor Investing & Smart Beta',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #001a1a 0%, #002828 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -731,7 +731,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Types of Financial Risk',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0505 0%, #2a0808 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -756,7 +756,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Value at Risk (VaR)',
-        duration: 54,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0606 0%, #270a0a 100%)',
         svgType: 'var-distribution',
         svgData: {
@@ -780,7 +780,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Stress Testing & Scenario Analysis',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0505 0%, #260808 100%)',
         svgType: 'two-column',
         svgData: {
@@ -804,7 +804,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'Greeks & Hedging Strategies',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #1a0606 0%, #250909 100%)',
         svgType: 'bar-chart',
         svgData: {
@@ -841,7 +841,7 @@ export const MODULES = [
       {
         id: 'scene-1',
         title: 'Global Regulatory Landscape',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1a0d 0%, #122415 100%)',
         svgType: 'flow-diagram',
         svgData: {
@@ -869,7 +869,7 @@ export const MODULES = [
       {
         id: 'scene-2',
         title: 'Post-Crisis Regulation: Dodd-Frank & Basel III',
-        duration: 52,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1a10 0%, #102215 100%)',
         svgType: 'two-column',
         svgData: {
@@ -893,7 +893,7 @@ export const MODULES = [
       {
         id: 'scene-3',
         title: 'Market Abuse & Insider Trading',
-        duration: 48,
+        duration: 100,
         background: 'linear-gradient(135deg, #0c1a0e 0%, #142016 100%)',
         svgType: 'two-column',
         svgData: {
@@ -917,7 +917,7 @@ export const MODULES = [
       {
         id: 'scene-4',
         title: 'ESG & Sustainable Finance Regulation',
-        duration: 50,
+        duration: 100,
         background: 'linear-gradient(135deg, #0a1c0c 0%, #112618 100%)',
         svgType: 'bar-chart',
         svgData: {

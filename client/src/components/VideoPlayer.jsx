@@ -53,6 +53,29 @@ function drainQueue() {
   synth.speak(utt)
 }
 
+// ── Speech-timing utilities ───────────────────────────────────────────────
+// Estimate how long a piece of text takes to speak at rate 0.88
+// (~150 wpm × 0.88 ≈ 132 wpm).  Used to schedule bullet reveals so they
+// appear *after* the preceding cue has finished, not at a fixed interval.
+const WORDS_PER_MIN = 132
+const CUE_GAP_SECS  = 0.5   // brief breath between consecutive cues
+
+function estimateSpeechSecs(text) {
+  return (text.trim().split(/\s+/).length / WORDS_PER_MIN) * 60
+}
+
+// Returns an array of start times (seconds) for each cue in the array.
+// cue[0] always fires at t=0; cue[i] fires after cue[i-1] is estimated done.
+function getCueTimes(cues) {
+  const times = [0]
+  let t = 0
+  for (let i = 0; i < cues.length - 1; i++) {
+    t += estimateSpeechSecs(cues[i]) + CUE_GAP_SECS
+    times.push(t)
+  }
+  return times
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function VideoPlayer({ moduleId, scenes, onComplete }) {
   const [elapsed, setElapsed] = useState(0)
@@ -118,12 +141,15 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
   const prevCum = scenes.slice(0, sceneIdx).reduce((s, sc) => s + sc.duration, 0)
   const sceneElapsed = elapsed - prevCum
 
-  // Bullet visibility
-  const bulletInterval = scene.bullets.length > 0
-    ? scene.duration / (scene.bullets.length + 1)
-    : scene.duration
+  // ── Cue times (speech-estimated) ─────────────────────────────────────────
+  // cue[0] = intro narration fires at t=0 (no bullet yet)
+  // cue[i] fires after cue[i-1] estimated speech finishes → bullet[i-1] appears
+  const sceneCues   = NARRATIONS[moduleId]?.[sceneIdx] ?? []
+  const cueTimes    = getCueTimes(sceneCues)
+
+  // Bullet[i] becomes visible when cue[i+1] fires (i.e. after intro + i prior cues)
   const visibleBullets = Math.min(
-    Math.floor(sceneElapsed / bulletInterval),
+    cueTimes.slice(1).filter(t => sceneElapsed >= t).length,
     scene.bullets.length
   )
 
@@ -134,22 +160,21 @@ export default function VideoPlayer({ moduleId, scenes, onComplete }) {
     firedCuesRef.current = new Set()
   }
 
-  // Fire cues in sync with the timer — runs on every elapsed tick while playing
+  // Fire each cue when sceneElapsed reaches its estimated start time
   useEffect(() => {
     if (!playing || mutedRef.current) return
 
-    const cues = NARRATIONS[moduleId]?.[sceneIdx]
-    if (!cues) return
+    const cues  = NARRATIONS[moduleId]?.[sceneIdx]
+    if (!cues?.length) return
 
+    const times = getCueTimes(cues)
     cues.forEach((text, idx) => {
-      // cue 0 fires at t=0, cue i fires at bulletInterval × i
-      const cueTime = idx * bulletInterval
-      if (sceneElapsed >= cueTime && !firedCuesRef.current.has(idx)) {
+      if (sceneElapsed >= times[idx] && !firedCuesRef.current.has(idx)) {
         firedCuesRef.current.add(idx)
         enqueue(text)
       }
     })
-  // We intentionally use sceneElapsed (derived from elapsed) as the trigger
+  // sceneElapsed / sceneIdx are derived from elapsed — intentional omission
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, playing])
 
